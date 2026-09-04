@@ -20,18 +20,41 @@ A mesma configuração deve futuramente ser uma projeção de artefatos Everythi
 
 ## Executar
 
+Instale as dependências locais:
+
 ```bash
-elm make src/Main.elm --output=dist/elm.js
+npm install
+```
+
+Build de desenvolvimento:
+
+```bash
+npm run build:debug
 python3 -m http.server 8080
 ```
 
 Abra `http://localhost:8080`.
 
-Para build otimizado:
+Build otimizado:
 
 ```bash
 npm run build
 ```
+
+Os dois comandos compilam `src/Main.elm` para `dist/elm.js`, que é carregado por `index.html`.
+
+## CI
+
+O workflow `.github/workflows/elm-ci.yml` executa em pushes e pull requests para `main` e também pode ser iniciado manualmente.
+
+Ele:
+
+1. valida `elm.json`, `src/Main.elm` e `index.html`;
+2. instala o compilador Elm 0.19.1 via dependência npm fixada;
+3. compila um build normal;
+4. compila o bundle otimizado de produção;
+5. verifica se `index.html` referencia `dist/elm.js`;
+6. publica `index.html` + `dist/elm.js` como artifact do GitHub Actions por 14 dias.
 
 ## Próxima integração
 
