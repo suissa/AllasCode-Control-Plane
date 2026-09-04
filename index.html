@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#f8fafc" />
+  <title>AllasCode Ecosystem Control Plane</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ["Manrope", "sans-serif"],
+            display: ["DM Serif Display", "serif"]
+          },
+          colors: {
+            ink: "#171717",
+            paper: "#f8fafc",
+            line: "#e5e7eb",
+            accent: "#f34f9b",
+            accentSoft: "#fdf0f6"
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    html { background: #f8fafc; }
+    body { margin: 0; min-width: 320px; font-family: "Manrope", sans-serif; color: #171717; }
+    button, input { font: inherit; }
+    ::selection { background: #fce7f3; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script src="./dist/elm.js"></script>
+  <script>
+    Elm.Main.init({ node: document.getElementById("app") });
+  </script>
+</body>
+</html>
