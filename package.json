@@ -1,0 +1,14 @@
+{
+  "name": "allascode-control-plane",
+  "version": "0.0.1",
+  "private": true,
+  "description": "AllasCode Ecosystem Control Plane — Elm frontend",
+  "scripts": {
+    "prebuild": "node -e \"require('fs').mkdirSync('dist',{ recursive: true })\"",
+    "build": "elm make src/Main.elm --optimize --output=dist/elm.js",
+    "build:debug": "node -e \"require('fs').mkdirSync('dist',{ recursive: true })\" && elm make src/Main.elm --output=dist/elm.js"
+  },
+  "devDependencies": {
+    "elm": "0.19.1-6"
+  }
+}
