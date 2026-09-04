@@ -1,0 +1,76 @@
+name: Elm CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: elm-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Compile Elm
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Cache Elm packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.elm
+          key: ${{ runner.os }}-elm-0.19.1-${{ hashFiles('elm.json') }}
+          restore-keys: |
+            ${{ runner.os }}-elm-0.19.1-
+
+      - name: Validate Elm project structure
+        shell: bash
+        run: |
+          test -f elm.json || { echo '::error file=elm.json::elm.json not found'; exit 1; }
+          test -f src/Main.elm || { echo '::error file=src/Main.elm::src/Main.elm not found'; exit 1; }
+          test -f index.html || { echo '::error file=index.html::index.html not found'; exit 1; }
+
+      - name: Install Elm compiler
+        run: npm install --no-audit --no-fund
+
+      - name: Print Elm version
+        run: npx elm --version
+
+      - name: Compile debug build
+        run: npm run build:debug
+
+      - name: Compile optimized build
+        run: npm run build
+
+      - name: Verify browser bundle
+        shell: bash
+        run: |
+          test -s dist/elm.js || { echo '::error file=dist/elm.js::Elm bundle was not generated'; exit 1; }
+          grep -q 'dist/elm.js' index.html || { echo '::error file=index.html::index.html does not reference dist/elm.js'; exit 1; }
+          echo "Bundle size: $(wc -c < dist/elm.js) bytes"
+
+      - name: Upload compiled Control Plane
+        uses: actions/upload-artifact@v4
+        with:
+          name: allascode-control-plane-${{ github.sha }}
+          path: |
+            index.html
+            dist/elm.js
+          if-no-files-found: error
+          retention-days: 14
