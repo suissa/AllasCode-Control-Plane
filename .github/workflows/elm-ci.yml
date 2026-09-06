@@ -63,7 +63,7 @@ jobs:
         shell: bash
         run: |
           npx elm --version
-          npx @lightpanda/browser version
+          node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync('node_modules/@lightpanda/browser/package.json','utf8')); console.log('Lightpanda npm', p.version)"
 
       - name: Compile debug build
         run: npm run build:debug
