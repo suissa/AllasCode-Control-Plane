@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   build:
-    name: Compile Elm
+    name: Compile and test Elm
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -39,18 +39,31 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-elm-0.19.1-
 
+      - name: Cache Lightpanda browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/lightpanda-node
+          key: ${{ runner.os }}-lightpanda-1.6.0
+
       - name: Validate Elm project structure
         shell: bash
         run: |
           test -f elm.json || { echo '::error file=elm.json::elm.json not found'; exit 1; }
           test -f src/Main.elm || { echo '::error file=src/Main.elm::src/Main.elm not found'; exit 1; }
           test -f index.html || { echo '::error file=index.html::index.html not found'; exit 1; }
+          test -f tests/interface.lightpanda.test.mjs || { echo '::error file=tests/interface.lightpanda.test.mjs::Lightpanda UI tests not found'; exit 1; }
 
-      - name: Install Elm compiler
+      - name: Install dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Print Elm version
-        run: npx elm --version
+      - name: Install Lightpanda browser
+        run: npx @lightpanda/browser install
+
+      - name: Print tool versions
+        shell: bash
+        run: |
+          npx elm --version
+          npx @lightpanda/browser version
 
       - name: Compile debug build
         run: npm run build:debug
@@ -64,6 +77,9 @@ jobs:
           test -s dist/elm.js || { echo '::error file=dist/elm.js::Elm bundle was not generated'; exit 1; }
           grep -q 'dist/elm.js' index.html || { echo '::error file=index.html::index.html does not reference dist/elm.js'; exit 1; }
           echo "Bundle size: $(wc -c < dist/elm.js) bytes"
+
+      - name: Test interface with Lightpanda
+        run: npm run test:ui
 
       - name: Upload compiled Control Plane
         uses: actions/upload-artifact@v4
