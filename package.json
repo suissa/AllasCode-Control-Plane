@@ -6,9 +6,12 @@
   "scripts": {
     "prebuild": "node -e \"require('fs').mkdirSync('dist',{ recursive: true })\"",
     "build": "elm make src/Main.elm --optimize --output=dist/elm.js",
-    "build:debug": "node -e \"require('fs').mkdirSync('dist',{ recursive: true })\" && elm make src/Main.elm --output=dist/elm.js"
+    "build:debug": "node -e \"require('fs').mkdirSync('dist',{ recursive: true })\" && elm make src/Main.elm --output=dist/elm.js",
+    "test:ui": "node --test tests/interface.lightpanda.test.mjs"
   },
   "devDependencies": {
-    "elm": "0.19.1-6"
+    "@lightpanda/browser": "1.6.0",
+    "elm": "0.19.1-6",
+    "playwright-core": "1.63.0"
   }
 }
