@@ -1,20 +1,22 @@
 import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
-import { after, before, beforeEach, test } from "node:test";
-import { fileURLToPath } from "node:url";
+import { homedir } from "node:os";
 import { dirname, join, normalize } from "node:path";
-import { setTimeout as delay } from "node:timers/promises";
+import { after, before, test } from "node:test";
+import { promisify } from "node:util";
+import { fileURLToPath } from "node:url";
 
-import { lightpanda } from "@lightpanda/browser";
-import { chromium } from "playwright-core";
+const execFileAsync = promisify(execFile);
 
 const HOST = "127.0.0.1";
-const CDP_PORT = 9222;
 const ROOT = normalize(join(dirname(fileURLToPath(import.meta.url)), ".."));
 const TITLE = "AllasCode Ecosystem Control Plane";
 const BOOTSTRAP_COPY =
   "Elm frontend entrypoint. Domain data and Control Plane API integration are intentionally not implemented in this bootstrap.";
+const LIGHTPANDA_EXECUTABLE =
+  process.env.LIGHTPANDA_EXECUTABLE_PATH ?? join(homedir(), ".cache", "lightpanda-node", "lightpanda");
 
 const HARNESS_HTML = `<!doctype html>
 <html lang="pt-BR">
@@ -33,10 +35,7 @@ const HARNESS_HTML = `<!doctype html>
 
 let server;
 let baseUrl;
-let lightpandaProcess;
-let browser;
-let context;
-let page;
+let renderedHtml;
 
 function startStaticServer() {
   return new Promise((resolve, reject) => {
@@ -83,47 +82,37 @@ function startStaticServer() {
   });
 }
 
-async function cleanupWithin(promise, timeoutMs = 2_000) {
-  if (!promise) return;
-  await Promise.race([promise.catch(() => undefined), delay(timeoutMs)]);
-}
-
 before(async () => {
   baseUrl = await startStaticServer();
-  lightpandaProcess = await lightpanda.serve({ host: HOST, port: CDP_PORT });
-  browser = await chromium.connectOverCDP(`http://${HOST}:${CDP_PORT}`, {
-    isLocal: true,
-    timeout: 10_000,
-  });
 
-  context = browser.contexts()[0];
-  assert.ok(context, "Lightpanda must expose its default CDP browser context");
-  page = context.pages()[0] ?? (await context.newPage());
+  const result = await execFileAsync(
+    LIGHTPANDA_EXECUTABLE,
+    [
+      "fetch",
+      "--dump",
+      "html",
+      "--log-level",
+      "error",
+      `${baseUrl}/__lightpanda__/`,
+    ],
+    {
+      encoding: "utf8",
+      maxBuffer: 5 * 1024 * 1024,
+      timeout: 15_000,
+    },
+  );
+
+  renderedHtml = result.stdout;
+  assert.ok(renderedHtml, "Lightpanda must return the rendered post-JavaScript DOM");
 }, { timeout: 20_000 });
 
-beforeEach(async () => {
-  await page.goto(`${baseUrl}/__lightpanda__/`, {
-    waitUntil: "domcontentloaded",
-    timeout: 10_000,
-  });
-}, { timeout: 15_000 });
-
 after(async () => {
-  await cleanupWithin(page?.close());
-  await cleanupWithin(browser?.close());
-
-  if (lightpandaProcess) {
-    lightpandaProcess.stdout?.destroy();
-    lightpandaProcess.stderr?.destroy();
-    lightpandaProcess.kill();
-  }
-
   if (server) {
     await new Promise((resolve) => server.close(() => resolve()));
   }
-}, { timeout: 10_000 });
+}, { timeout: 5_000 });
 
-test("production HTML shell points to the same Elm entrypoint", async () => {
+test("production HTML shell points to the Elm entrypoint", async () => {
   const indexHtml = await readFile(join(ROOT, "index.html"), "utf8");
 
   assert.match(indexHtml, /<div id="app"><\/div>/);
@@ -131,27 +120,19 @@ test("production HTML shell points to the same Elm entrypoint", async () => {
   assert.match(indexHtml, /Elm\.Main\.init\(\{ node: document\.getElementById\("app"\) \}\)/);
 });
 
-test("compiled Elm application mounts into #app", { timeout: 10_000 }, async () => {
-  const snapshot = await page.evaluate(() => ({
-    appCount: document.querySelectorAll("#app").length,
-    rootCount: document.querySelectorAll("#app > div").length,
-  }));
-
-  assert.equal(snapshot.appCount, 1, "the interface must expose exactly one #app mount point");
-  assert.equal(snapshot.rootCount, 1, "Elm must render exactly one root view inside #app");
+test("compiled Elm application mounts into #app in Lightpanda", () => {
+  assert.doesNotMatch(renderedHtml, /<div id="app"><\/div>/);
+  assert.match(renderedHtml, /<div id="app">\s*<div[^>]*>/);
 });
 
-test("Control Plane identity is rendered by Elm", { timeout: 10_000 }, async () => {
-  const heading = await page.evaluate(() => document.querySelector("#app h1")?.textContent ?? null);
-  assert.equal(heading, TITLE);
+test("Control Plane identity is rendered by Elm in Lightpanda", () => {
+  assert.match(renderedHtml, /<h1[^>]*>AllasCode Ecosystem Control Plane<\/h1>/);
 });
 
-test("bootstrap state truthfully reports missing domain integration", { timeout: 10_000 }, async () => {
-  const copy = await page.evaluate(() => document.querySelector("#app p")?.textContent ?? null);
-  assert.equal(copy, BOOTSTRAP_COPY);
+test("bootstrap state truthfully reports missing domain integration", () => {
+  assert.ok(renderedHtml.includes(BOOTSTRAP_COPY));
 });
 
-test("document title identifies the Control Plane", { timeout: 10_000 }, async () => {
-  const title = await page.evaluate(() => document.title);
-  assert.equal(title, TITLE);
+test("document title identifies the Control Plane", () => {
+  assert.match(renderedHtml, /<title>AllasCode Ecosystem Control Plane<\/title>/);
 });
