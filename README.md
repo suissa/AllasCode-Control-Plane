@@ -8,7 +8,7 @@ Dashboard inspirado na organização visual do inference.sh, mas reposicionado p
 - Tailwind CSS via CDN
 - Google Fonts via CDN (`Manrope` + `DM Serif Display`)
 - Sem framework JavaScript adicional na aplicação
-- Lightpanda + Playwright Core apenas para testes funcionais no navegador
+- Lightpanda apenas para testes funcionais no navegador
 
 ## UX
 
@@ -48,7 +48,9 @@ Os dois comandos compilam `src/Main.elm` para `dist/elm.js`, que é carregado po
 
 ## Testes funcionais da interface
 
-Os testes em `tests/interface.lightpanda.test.mjs` executam o bundle compilado em um navegador Lightpanda real controlado por CDP via `playwright-core`.
+Os testes em `tests/interface.lightpanda.test.mjs` executam o bundle compilado diretamente no browser Lightpanda. O runner sobe um servidor HTTP local, carrega `dist/elm.js` e usa `lightpanda fetch --dump html` para obter o DOM depois da execução do JavaScript/Elm.
+
+O harness de teste não carrega Google Fonts nem Tailwind CDN, porque esses recursos são apenas de apresentação e adicionariam dependência de rede ao gate funcional. Em paralelo, o teste verifica que o `index.html` de produção continua apontando para o mesmo mount point, bundle e `Elm.Main.init`.
 
 Instale o binário do Lightpanda e execute:
 
@@ -60,13 +62,13 @@ npm run test:ui
 
 A cobertura acompanha apenas comportamentos realmente implementados. No bootstrap atual ela valida:
 
-1. existência do único mount point `#app`;
-2. montagem efetiva do Elm dentro de `#app`;
+1. contrato do `index.html` com `#app`, `dist/elm.js` e `Elm.Main.init`;
+2. montagem efetiva do Elm dentro de `#app` após execução pelo Lightpanda;
 3. renderização da identidade `AllasCode Ecosystem Control Plane` pelo Elm;
 4. mensagem explícita de que dados de domínio/API ainda não foram implementados;
 5. título correto do documento.
 
-Cada nova interação da interface — troca Domínio/Técnico, navegação, formulários, comandos, mutations ou consumo da API — deve adicionar seu respectivo teste funcional Lightpanda antes de ser considerada coberta pelo CI.
+Cada nova funcionalidade da interface — troca Domínio/Técnico, navegação, formulários, comandos, mutations ou consumo da API — deve adicionar seu respectivo cenário Lightpanda antes de ser considerada coberta pelo CI.
 
 ## CI
 
