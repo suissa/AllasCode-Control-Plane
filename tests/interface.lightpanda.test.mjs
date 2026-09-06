@@ -120,9 +120,9 @@ test("production HTML shell points to the Elm entrypoint", async () => {
   assert.match(indexHtml, /Elm\.Main\.init\(\{ node: document\.getElementById\("app"\) \}\)/);
 });
 
-test("compiled Elm application mounts into #app in Lightpanda", () => {
+test("compiled Elm application replaces the mount point with its rendered root", () => {
   assert.doesNotMatch(renderedHtml, /<div id="app"><\/div>/);
-  assert.match(renderedHtml, /<div id="app">\s*<div[^>]*>/);
+  assert.match(renderedHtml, /<body>\s*<div class="min-h-screen bg-paper px-6 py-12 text-ink">/);
 });
 
 test("Control Plane identity is rendered by Elm in Lightpanda", () => {
