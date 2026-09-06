@@ -63,7 +63,7 @@ npm run test:ui
 A cobertura acompanha apenas comportamentos realmente implementados. No bootstrap atual ela valida:
 
 1. contrato do `index.html` com `#app`, `dist/elm.js` e `Elm.Main.init`;
-2. montagem efetiva do Elm dentro de `#app` após execução pelo Lightpanda;
+2. substituição efetiva do mount point `#app` pela raiz renderizada pelo Elm, observada no DOM pós-JavaScript do Lightpanda;
 3. renderização da identidade `AllasCode Ecosystem Control Plane` pelo Elm;
 4. mensagem explícita de que dados de domínio/API ainda não foram implementados;
 5. título correto do documento.
