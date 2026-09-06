@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
-import { after, afterEach, before, beforeEach, test } from "node:test";
+import { after, before, beforeEach, test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { dirname, extname, join, normalize } from "node:path";
 
@@ -73,22 +73,19 @@ before(async () => {
   baseUrl = await startStaticServer();
   lightpandaProcess = await lightpanda.serve({ host: HOST, port: CDP_PORT });
   browser = await chromium.connectOverCDP({ endpointURL: `ws://${HOST}:${CDP_PORT}` });
+  context = await browser.newContext();
+  page = await context.newPage();
 });
 
 beforeEach(async () => {
-  context = await browser.newContext();
-  page = await context.newPage();
-  const response = await page.goto(baseUrl, { waitUntil: "load" });
+  const response = await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
   assert.ok(response, "Lightpanda should receive a response for the Control Plane page");
   assert.equal(response.status(), 200, "Control Plane page should return HTTP 200");
 });
 
-afterEach(async () => {
+after(async () => {
   await page?.close();
   await context?.close();
-});
-
-after(async () => {
   await browser?.close();
 
   if (lightpandaProcess) {
