@@ -91,8 +91,13 @@ async function cleanupWithin(promise, timeoutMs = 2_000) {
 before(async () => {
   baseUrl = await startStaticServer();
   lightpandaProcess = await lightpanda.serve({ host: HOST, port: CDP_PORT });
-  browser = await chromium.connectOverCDP({ endpointURL: `ws://${HOST}:${CDP_PORT}` });
-  context = browser.contexts()[0] ?? (await browser.newContext());
+  browser = await chromium.connectOverCDP(`http://${HOST}:${CDP_PORT}`, {
+    isLocal: true,
+    timeout: 10_000,
+  });
+
+  context = browser.contexts()[0];
+  assert.ok(context, "Lightpanda must expose its default CDP browser context");
   page = context.pages()[0] ?? (await context.newPage());
 }, { timeout: 20_000 });
 
@@ -105,7 +110,6 @@ beforeEach(async () => {
 
 after(async () => {
   await cleanupWithin(page?.close());
-  await cleanupWithin(context?.close());
   await cleanupWithin(browser?.close());
 
   if (lightpandaProcess) {
